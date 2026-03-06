@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required files exist
+        run: |
+          echo "Checking required files..."
+          files=("README.md" "LICENSE" "CODE_OF_CONDUCT.md" "CONTRIBUTING.md")
+          missing=0
+          for file in "${files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "Missing required file: $file"
+              missing=1
+            else
+              echo "Found: $file"
+            fi
+          done
+          if [ $missing -eq 1 ]; then
+            echo "Some required files are missing!"
+            exit 1
+          fi
+          echo "All required files present."
+
+      - name: Validate YAML files
+        run: |
+          echo "Checking workflow YAML files..."
+          for file in .github/workflows/*.yml; do
+            echo "Validating: $file"
+            python3 -c "import yaml; yaml.safe_load(open('$file'))" || exit 1
+          done
+          echo "All YAML files are valid."
+
+      - name: Check markdown files
+        run: |
+          echo "Checking markdown files for common issues..."
+          for file in *.md; do
+            if [ ! -s "$file" ]; then
+              echo "Empty markdown file: $file"
+              exit 1
+            fi
+            echo "OK: $file ($(wc -l < "$file") lines)"
+          done
+          echo "All markdown files look good."
